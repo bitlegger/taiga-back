@@ -778,7 +778,7 @@ def test_watchers_assignation_for_issue(client):
     assert response.status_code == 400
 
     issue = f.create_issue(project=project1, owner=user1)
-    data = dict(IssueSerializer(issue).data)
+    data = {}
     data["id"] = None
     data["version"] = None
     data["watchers"] = [user1.pk, user2.pk]
@@ -790,8 +790,7 @@ def test_watchers_assignation_for_issue(client):
     # Test the impossible case when project is not
     # exists in create request, and validator works as expected
     issue = f.create_issue(project=project1, owner=user1)
-    data = dict(IssueSerializer(issue).data)
-
+    data = {}
     data["id"] = None
     data["watchers"] = [user1.pk, user2.pk]
     data["project"] = None
@@ -830,10 +829,11 @@ def test_watchers_assignation_for_task(client):
     assert response.status_code == 400
 
     task = f.create_task(project=project1, owner=user1, status__project=project1, milestone__project=project1)
-    data = dict(TaskSerializer(task).data)
-    data["id"] = None
-    data["version"] = None
-    data["watchers"] = [user1.pk, user2.pk]
+    data = {
+        "id": None,
+        "version": None,
+        "watchers": [user1.pk, user2.pk]
+    }
 
     url = reverse("tasks-list")
     response = client.json.post(url, json.dumps(data))
@@ -842,11 +842,11 @@ def test_watchers_assignation_for_task(client):
     # Test the impossible case when project is not
     # exists in create request, and validator works as expected
     task = f.create_task(project=project1, owner=user1, status__project=project1, milestone__project=project1)
-    data = dict(TaskSerializer(task).data)
-
-    data["id"] = None
-    data["watchers"] = [user1.pk, user2.pk]
-    data["project"] = None
+    data = {
+        "id": None,
+        "watchers": [user1.pk, user2.pk],
+        "project": None
+    }
 
     url = reverse("tasks-list")
     response = client.json.post(url, json.dumps(data))
@@ -882,10 +882,11 @@ def test_watchers_assignation_for_us(client):
     assert response.status_code == 400
 
     us = f.create_userstory(project=project1, owner=user1, status__project=project1)
-    data = dict(UserStorySerializer(us).data)
-    data["id"] = None
-    data["version"] = None
-    data["watchers"] = [user1.pk, user2.pk]
+    data = {
+        "id": None,
+        "version": None,
+        "watchers": [user1.pk, user2.pk]
+    }
 
     url = reverse("userstories-list")
     response = client.json.post(url, json.dumps(data))
@@ -894,11 +895,11 @@ def test_watchers_assignation_for_us(client):
     # Test the impossible case when project is not
     # exists in create request, and validator works as expected
     us = f.create_userstory(project=project1, owner=user1, status__project=project1)
-    data = dict(UserStorySerializer(us).data)
-
-    data["id"] = None
-    data["watchers"] = [user1.pk, user2.pk]
-    data["project"] = None
+    data = {
+        "id": None,
+        "watchers": [user1.pk, user2.pk],
+        "project": None
+    }
 
     url = reverse("userstories-list")
     response = client.json.post(url, json.dumps(data))
