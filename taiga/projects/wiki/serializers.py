@@ -24,14 +24,22 @@ from taiga.mdrender.service import render as mdrender
 
 from . import models
 
-#TODO: WatchedResourceModelSerializer
-class WikiPageSerializer(WatchersValidator, serializers.ModelSerializer):
-    html = serializers.SerializerMethodField("get_html")
-    editions = serializers.SerializerMethodField("get_editions")
+import serpy
 
-    class Meta:
-        model = models.WikiPage
-        read_only_fields = ('modified_date', 'created_date', 'owner')
+class WikiPageSerializer(WatchedResourceModelSerializer, serializers.LightSerializer):
+    id = serpy.Field()
+    project = serpy.Field(attr="project_id")
+    slug = serpy.Field()
+    content = serpy.Field()
+    owner = serpy.Field(attr="owner_id")
+    last_modifier = serpy.Field(attr="last_modifier_id")
+    created_date = serpy.Field()
+    modified_date = serpy.Field()
+
+    html = serpy.MethodField()
+    editions = serpy.MethodField()
+
+    version = serpy.Field()
 
     def get_html(self, obj):
         return mdrender(obj.project, obj.content)
@@ -40,7 +48,9 @@ class WikiPageSerializer(WatchersValidator, serializers.ModelSerializer):
         return history_service.get_history_queryset_by_model_instance(obj).count() + 1  # +1 for creation
 
 
-class WikiLinkSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.WikiLink
-        read_only_fields = ('href',)
+class WikiLinkSerializer(serializers.LightSerializer):
+    id = serpy.Field()
+    project = serpy.Field(attr="project_id")
+    title = serpy.Field()
+    href = serpy.Field()
+    order = serpy.Field()

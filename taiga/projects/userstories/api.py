@@ -269,7 +269,10 @@ class UserStoryViewSet(OCCResourceMixin, VotedResourceMixin, HistoryResourceMixi
                 data["bulk_stories"], project=project, owner=request.user,
                 status_id=data.get("status_id") or project.default_us_status_id,
                 callback=self.post_save, precall=self.pre_save)
+
+            user_stories = self.get_queryset().filter(id__in=[i.id for i in user_stories])
             user_stories_serialized = self.get_serializer_class()(user_stories, many=True)
+
             return response.Ok(user_stories_serialized.data)
         return response.BadRequest(serializer.errors)
 

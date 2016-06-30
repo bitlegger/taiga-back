@@ -194,6 +194,8 @@ class TaskViewSet(OCCResourceMixin, VotedResourceMixin, HistoryResourceMixin, Wa
                 data["bulk_tasks"], milestone_id=data["sprint_id"], user_story_id=data["us_id"],
                 status_id=data.get("status_id") or project.default_task_status_id,
                 project=project, owner=request.user, callback=self.post_save, precall=self.pre_save)
+
+            tasks = self.get_queryset().filter(id__in=[i.id for i in tasks])
             tasks_serialized = self.get_serializer_class()(tasks, many=True)
 
             return response.Ok(tasks_serialized.data)

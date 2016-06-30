@@ -262,48 +262,53 @@ def test_update_userstory_points(client):
     f.MembershipFactory.create(project=project, user=user1, role=role1, is_admin=True)
     f.MembershipFactory.create(project=project, user=user2, role=role2)
 
-    f.PointsFactory.create(project=project, value=None)
-    f.PointsFactory.create(project=project, value=1)
+    points1 = f.PointsFactory.create(project=project, value=None)
+    points2 = f.PointsFactory.create(project=project, value=1)
     points3 = f.PointsFactory.create(project=project, value=2)
 
     us = f.UserStoryFactory.create(project=project,owner=user1, status__project=project,
                                    milestone__project=project)
-    usdata = UserStorySerializer(us).data
 
     url = reverse("userstories-detail", args=[us.pk])
 
     client.login(user1)
 
     # invalid role
-    data = {}
-    data["version"] = usdata["version"]
-    data["points"] = copy.copy(usdata["points"])
-    data["points"].update({"222222": points3.pk})
+    data = {
+        "version": us.version,
+        "points": {
+            str(role1.pk): points1.pk,
+            str(role2.pk): points2.pk,
+            "222222": points3.pk
+        }
+    }
 
     response = client.json.patch(url, json.dumps(data))
     assert response.status_code == 400
 
     # invalid point
-    data = {}
-    data["version"] = usdata["version"]
-    data["points"] = copy.copy(usdata["points"])
-    data["points"].update({str(role1.pk): "999999"})
+    data = {
+        "version": us.version,
+        "points": {
+            str(role1.pk): 999999,
+            str(role2.pk): points2.pk
+        }
+    }
 
     response = client.json.patch(url, json.dumps(data))
     assert response.status_code == 400
 
     # Api should save successful
-    data = {}
-    data["version"] = usdata["version"]
-    data["points"] = copy.copy(usdata["points"])
-    data["points"].update({str(role1.pk): points3.pk})
+    data = {
+        "version": us.version,
+        "points": {
+            str(role1.pk): points3.pk,
+            str(role2.pk): points2.pk
+        }
+    }
 
     response = client.json.patch(url, json.dumps(data))
-    us = models.UserStory.objects.get(pk=us.pk)
-    usdatanew = UserStorySerializer(us).data
-    assert response.status_code == 200, str(response.content)
-    assert response.data["points"] == usdatanew['points']
-    assert response.data["points"] != usdata['points']
+    assert response.data["points"][str(role1.pk)] == points3.pk
 
 
 def test_update_userstory_rolepoints_on_add_new_role(client):

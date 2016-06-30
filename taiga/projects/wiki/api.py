@@ -42,13 +42,14 @@ from taiga.projects.occ import OCCResourceMixin
 from . import models
 from . import permissions
 from . import serializers
-
+from . import validators
 
 class WikiViewSet(OCCResourceMixin, HistoryResourceMixin, WatchedResourceMixin,
                   BlockedByProjectMixin, ModelCrudViewSet):
 
     model = models.WikiPage
     serializer_class = serializers.WikiPageSerializer
+    validator_class = validators.WikiPageValidator
     permission_classes = (permissions.WikiPagePermission,)
     filter_backends = (filters.CanViewWikiPagesFilterBackend,)
     filter_fields = ("project", "slug")
@@ -100,6 +101,7 @@ class WikiWatchersViewSet(WatchersViewSetMixin, ModelListViewSet):
 class WikiLinkViewSet(BlockedByProjectMixin, ModelCrudViewSet):
     model = models.WikiLink
     serializer_class = serializers.WikiLinkSerializer
+    validator_class = validators.WikiLinkValidator
     permission_classes = (permissions.WikiLinkPermission,)
     filter_backends = (filters.CanViewWikiPagesFilterBackend,)
     filter_fields = ["project"]
