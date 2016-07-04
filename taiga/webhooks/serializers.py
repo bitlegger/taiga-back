@@ -26,7 +26,6 @@ from taiga.front.templatetags.functions import resolve as resolve_front_url
 from taiga.projects.history import models as history_models
 from taiga.projects.issues import models as issue_models
 from taiga.projects.milestones import models as milestone_models
-from taiga.projects.notifications.mixins import EditableWatchedResourceModelSerializer
 from taiga.projects.services import get_logo_big_thumbnail_url
 from taiga.projects.tasks import models as task_models
 from taiga.projects.tagging.fields import TagsField
@@ -38,44 +37,48 @@ from taiga.users.services import get_photo_or_gravatar_url
 
 from .models import Webhook, WebhookLog
 
+import serpy
 
 ########################################################################
 ## WebHooks
 ########################################################################
 
-class WebhookSerializer(serializers.ModelSerializer):
-    logs_counter = serializers.SerializerMethodField("get_logs_counter")
-
-    class Meta:
-        model = Webhook
+class WebhookSerializer(serializers.LightSerializer):
+    id = serpy.Field()
+    project = serpy.Field(attr="project_id")
+    name = serpy.Field()
+    url = serpy.Field()
+    key = serpy.Field()
+    logs_counter = serpy.MethodField()
 
     def get_logs_counter(self, obj):
         return obj.logs.count()
 
 
-class WebhookLogSerializer(serializers.ModelSerializer):
-    request_data = JsonField()
-    request_headers = JsonField()
-    response_headers = JsonField()
-
-    class Meta:
-        model = WebhookLog
+class WebhookLogSerializer(serializers.LightSerializer):
+    id = serpy.Field()
+    webhook = serpy.Field()
+    url = serpy.Field()
+    status = serpy.Field()
+    request_data = serpy.Field()
+    request_headers = serpy.Field()
+    response_data = serpy.Field()
+    response_headers = serpy.Field()
+    duration = serpy.Field()
+    created = serpy.Field()
 
 
 ########################################################################
 ## User
 ########################################################################
 
-class UserSerializer(serializers.Serializer):
-    id = serializers.SerializerMethodField("get_pk")
-    permalink = serializers.SerializerMethodField("get_permalink")
-    gravatar_url = serializers.SerializerMethodField("get_gravatar_url")
-    username = serializers.SerializerMethodField("get_username")
-    full_name = serializers.SerializerMethodField("get_full_name")
-    photo = serializers.SerializerMethodField("get_photo")
-
-    def get_pk(self, obj):
-        return obj.pk
+class UserSerializer(serializers.LightSerializer):
+    id = serpy.Field(attr="pk")
+    permalink = serpy.MethodField()
+    gravatar_url = serpy.MethodField()
+    username = serpy.MethodField()
+    full_name = serpy.MethodField()
+    photo = serpy.MethodField()
 
     def get_permalink(self, obj):
         return resolve_front_url("user", obj.username)
@@ -84,7 +87,7 @@ class UserSerializer(serializers.Serializer):
         return get_gravatar_url(obj.email)
 
     def get_username(self, obj):
-        return obj.get_username
+        return obj.get_username()
 
     def get_full_name(self, obj):
         return obj.get_full_name()
@@ -92,18 +95,21 @@ class UserSerializer(serializers.Serializer):
     def get_photo(self, obj):
         return get_photo_or_gravatar_url(obj)
 
+    def to_value(self, instance):
+        if instance is None:
+            return None
+
+        return super().to_value(instance)
+
 ########################################################################
 ## Project
 ########################################################################
 
-class ProjectSerializer(serializers.Serializer):
-    id = serializers.SerializerMethodField("get_pk")
-    permalink = serializers.SerializerMethodField("get_permalink")
-    name = serializers.SerializerMethodField("get_name")
-    logo_big_url = serializers.SerializerMethodField("get_logo_big_url")
-
-    def get_pk(self, obj):
-        return obj.pk
+class ProjectSerializer(serializers.LightSerializer):
+    id = serpy.Field(attr="pk")
+    permalink = serpy.MethodField()
+    name = serpy.MethodField()
+    logo_big_url = serpy.MethodField()
 
     def get_permalink(self, obj):
         return resolve_front_url("project", obj.slug)
@@ -119,8 +125,8 @@ class ProjectSerializer(serializers.Serializer):
 ## History Serializer
 ########################################################################
 
-class HistoryDiffField(serializers.Field):
-    def to_native(self, value):
+class HistoryDiffField(serpy.Field):
+    def to_value(self, value):
         # Tip: 'value' is the object returned by
         #      taiga.projects.history.models.HistoryEntry.values_diff()
 
@@ -137,21 +143,21 @@ class HistoryDiffField(serializers.Field):
         return ret
 
 
-class HistoryEntrySerializer(serializers.ModelSerializer):
-    diff = HistoryDiffField(source="values_diff")
-
-    class Meta:
-        model = history_models.HistoryEntry
-        exclude = ("id", "type", "key", "is_hidden", "is_snapshot", "snapshot", "user", "delete_comment_user",
-                   "values", "created_at")
+class HistoryEntrySerializer(serializers.LightSerializer):
+    comment = serpy.Field()
+    comment_html = serpy.Field()
+    delete_comment_date = serpy.Field()
+    comment_versions = serpy.Field()
+    edit_comment_date = serpy.Field()
+    diff = HistoryDiffField(attr="values_diff")
 
 
 ########################################################################
 ## _Misc_
 ########################################################################
 
-class CustomAttributesValuesWebhookSerializerMixin(serializers.ModelSerializer):
-    custom_attributes_values = serializers.SerializerMethodField("get_custom_attributes_values")
+class CustomAttributesValuesWebhookSerializerMixin(serializers.LightSerializer):
+    custom_attributes_values = serpy.MethodField()
 
     def custom_attributes_queryset(self, project):
         raise NotImplementedError()
@@ -175,10 +181,10 @@ class CustomAttributesValuesWebhookSerializerMixin(serializers.ModelSerializer):
             return None
 
 
-class RolePointsSerializer(serializers.Serializer):
-    role = serializers.SerializerMethodField("get_role")
-    name = serializers.SerializerMethodField("get_name")
-    value = serializers.SerializerMethodField("get_value")
+class RolePointsSerializer(serializers.LightSerializer):
+    role = serpy.MethodField()
+    name = serpy.MethodField()
+    value = serpy.MethodField()
 
     def get_role(self, obj):
         return obj.role.name
@@ -190,16 +196,13 @@ class RolePointsSerializer(serializers.Serializer):
         return obj.points.value
 
 
-class UserStoryStatusSerializer(serializers.Serializer):
-    id = serializers.SerializerMethodField("get_pk")
-    name = serializers.SerializerMethodField("get_name")
-    slug = serializers.SerializerMethodField("get_slug")
-    color = serializers.SerializerMethodField("get_color")
-    is_closed = serializers.SerializerMethodField("get_is_closed")
-    is_archived = serializers.SerializerMethodField("get_is_archived")
-
-    def get_pk(self, obj):
-        return obj.pk
+class UserStoryStatusSerializer(serializers.LightSerializer):
+    id = serpy.Field(attr="pk")
+    name = serpy.MethodField()
+    slug = serpy.MethodField()
+    color = serpy.MethodField()
+    is_closed = serpy.MethodField()
+    is_archived = serializers.serpy.MethodField()
 
     def get_name(self, obj):
         return obj.name
@@ -217,15 +220,13 @@ class UserStoryStatusSerializer(serializers.Serializer):
         return obj.is_archived
 
 
-class TaskStatusSerializer(serializers.Serializer):
-    id = serializers.SerializerMethodField("get_pk")
-    name = serializers.SerializerMethodField("get_name")
-    slug = serializers.SerializerMethodField("get_slug")
-    color = serializers.SerializerMethodField("get_color")
-    is_closed = serializers.SerializerMethodField("get_is_closed")
+class TaskStatusSerializer(serializers.LightSerializer):
+    id = serpy.Field(attr="pk")
+    name = serpy.MethodField()
+    slug = serpy.MethodField()
+    color = serpy.MethodField()
+    is_closed = serpy.MethodField()
 
-    def get_pk(self, obj):
-        return obj.pk
 
     def get_name(self, obj):
         return obj.name
@@ -240,15 +241,12 @@ class TaskStatusSerializer(serializers.Serializer):
         return obj.is_closed
 
 
-class IssueStatusSerializer(serializers.Serializer):
-    id = serializers.SerializerMethodField("get_pk")
-    name = serializers.SerializerMethodField("get_name")
-    slug = serializers.SerializerMethodField("get_slug")
-    color = serializers.SerializerMethodField("get_color")
-    is_closed = serializers.SerializerMethodField("get_is_closed")
-
-    def get_pk(self, obj):
-        return obj.pk
+class IssueStatusSerializer(serializers.LightSerializer):
+    id = serpy.Field(attr="pk")
+    name = serpy.MethodField()
+    slug = serpy.MethodField()
+    color = serpy.MethodField()
+    is_closed = serpy.MethodField()
 
     def get_name(self, obj):
         return obj.name
@@ -263,13 +261,11 @@ class IssueStatusSerializer(serializers.Serializer):
         return obj.is_closed
 
 
-class IssueTypeSerializer(serializers.Serializer):
-    id = serializers.SerializerMethodField("get_pk")
-    name = serializers.SerializerMethodField("get_name")
-    color = serializers.SerializerMethodField("get_color")
+class IssueTypeSerializer(serializers.LightSerializer):
+    id = serpy.Field(attr="pk")
+    name = serpy.MethodField()
+    color = serpy.MethodField()
 
-    def get_pk(self, obj):
-        return obj.pk
 
     def get_name(self, obj):
         return obj.name
@@ -278,13 +274,11 @@ class IssueTypeSerializer(serializers.Serializer):
         return obj.color
 
 
-class PrioritySerializer(serializers.Serializer):
-    id = serializers.SerializerMethodField("get_pk")
-    name = serializers.SerializerMethodField("get_name")
-    color = serializers.SerializerMethodField("get_color")
+class PrioritySerializer(serializers.LightSerializer):
+    id = serpy.Field(attr="pk")
+    name = serpy.MethodField()
+    color = serpy.MethodField()
 
-    def get_pk(self, obj):
-        return obj.pk
 
     def get_name(self, obj):
         return obj.name
@@ -293,13 +287,11 @@ class PrioritySerializer(serializers.Serializer):
         return obj.color
 
 
-class SeveritySerializer(serializers.Serializer):
-    id = serializers.SerializerMethodField("get_pk")
-    name = serializers.SerializerMethodField("get_name")
-    color = serializers.SerializerMethodField("get_color")
+class SeveritySerializer(serializers.LightSerializer):
+    id = serpy.Field(attr="pk")
+    name = serpy.MethodField()
+    color = serpy.MethodField()
 
-    def get_pk(self, obj):
-        return obj.pk
 
     def get_name(self, obj):
         return obj.name
@@ -312,14 +304,19 @@ class SeveritySerializer(serializers.Serializer):
 ## Milestone
 ########################################################################
 
-class MilestoneSerializer(serializers.ModelSerializer):
+class MilestoneSerializer(serializers.LightSerializer):
+    id = serpy.Field()
+    name = serpy.Field()
+    slug = serpy.Field()
+    estimated_start = serpy.Field()
+    estimated_finish = serpy.Field()
+    created_date = serpy.Field()
+    modified_date = serpy.Field()
+    closed = serpy.Field()
+    disponibility = serpy.Field()
     permalink = serializers.SerializerMethodField("get_permalink")
     project = ProjectSerializer()
     owner = UserSerializer()
-
-    class Meta:
-        model = milestone_models.Milestone
-        exclude = ("order", "watchers")
 
     def get_permalink(self, obj):
         return resolve_front_url("taskboard", obj.project.slug, obj.slug)
@@ -329,21 +326,30 @@ class MilestoneSerializer(serializers.ModelSerializer):
 ## User Story
 ########################################################################
 
-class UserStorySerializer(CustomAttributesValuesWebhookSerializerMixin, EditableWatchedResourceModelSerializer,
-                          serializers.ModelSerializer):
-    permalink = serializers.SerializerMethodField("get_permalink")
-    tags = TagsField(default=[], required=False)
-    external_reference = PgArrayField(required=False)
+class UserStorySerializer(CustomAttributesValuesWebhookSerializerMixin, serializers.LightSerializer):
+    id = serpy.Field()
+    ref = serpy.Field()
     project = ProjectSerializer()
+    is_closed = serpy.Field()
+    created_date = serpy.Field()
+    modified_date = serpy.Field()
+    finish_date = serpy.Field()
+    subject = serpy.Field()
+    client_requirement = serpy.Field()
+    team_requirement = serpy.Field()
+    generated_from_issue = serpy.Field(attr="generated_from_issue_id")
+    external_reference = serpy.Field()
+    tribe_gig = serpy.Field()
+    watchers = serpy.MethodField()
+    is_blocked = serpy.Field()
+    blocked_note = serpy.Field()
+    tags = serpy.Field()
+    permalink = serializers.SerializerMethodField("get_permalink")
     owner = UserSerializer()
     assigned_to = UserSerializer()
-    points = RolePointsSerializer(source="role_points", many=True)
+    points = serpy.MethodField()
     status = UserStoryStatusSerializer()
     milestone = MilestoneSerializer()
-
-    class Meta:
-        model = us_models.UserStory
-        exclude = ("backlog_order", "sprint_order", "kanban_order", "version", "total_watchers", "is_watcher")
 
     def get_permalink(self, obj):
         return resolve_front_url("userstory", obj.project.slug, obj.ref)
@@ -351,15 +357,33 @@ class UserStorySerializer(CustomAttributesValuesWebhookSerializerMixin, Editable
     def custom_attributes_queryset(self, project):
         return project.userstorycustomattributes.all()
 
+    def get_watchers(self, obj):
+        return list(obj.get_watchers().values_list("id", flat=True))
+
+    def get_points(self, obj):
+        return RolePointsSerializer(obj.role_points.all(), many=True).data
 
 ########################################################################
 ## Task
 ########################################################################
 
-class TaskSerializer(CustomAttributesValuesWebhookSerializerMixin, EditableWatchedResourceModelSerializer,
-                     serializers.ModelSerializer):
+class TaskSerializer(CustomAttributesValuesWebhookSerializerMixin, serializers.LightSerializer):
+    id = serpy.Field()
+    ref = serpy.Field()
+    created_date = serpy.Field()
+    modified_date = serpy.Field()
+    finished_date = serpy.Field()
+    subject = serpy.Field()
+    us_order = serpy.Field()
+    taskboard_order = serpy.Field()
+    is_iocaine = serpy.Field()
+    external_reference = serpy.Field()
+    watchers = serpy.MethodField()
+    is_blocked = serpy.Field()
+    blocked_note = serpy.Field()
+    description = serpy.Field()
+    tags = serpy.Field()
     permalink = serializers.SerializerMethodField("get_permalink")
-    tags = TagsField(default=[], required=False)
     project = ProjectSerializer()
     owner = UserSerializer()
     assigned_to = UserSerializer()
@@ -367,25 +391,31 @@ class TaskSerializer(CustomAttributesValuesWebhookSerializerMixin, EditableWatch
     user_story = UserStorySerializer()
     milestone = MilestoneSerializer()
 
-    class Meta:
-        model = task_models.Task
-        exclude = ("version", "total_watchers", "is_watcher")
-
     def get_permalink(self, obj):
         return resolve_front_url("task", obj.project.slug, obj.ref)
 
     def custom_attributes_queryset(self, project):
         return project.taskcustomattributes.all()
 
+    def get_watchers(self, obj):
+        return list(obj.get_watchers().values_list("id", flat=True))
 
 ########################################################################
 ## Issue
 ########################################################################
 
-class IssueSerializer(CustomAttributesValuesWebhookSerializerMixin, EditableWatchedResourceModelSerializer,
-                      serializers.ModelSerializer):
+class IssueSerializer(CustomAttributesValuesWebhookSerializerMixin, serializers.LightSerializer):
+    id = serpy.Field()
+    ref = serpy.Field()
+    created_date = serpy.Field()
+    modified_date = serpy.Field()
+    finished_date = serpy.Field()
+    subject = serpy.Field()
+    external_reference = serpy.Field()
+    watchers = serpy.MethodField()
+    description = serpy.Field()
+    tags = serpy.Field()
     permalink = serializers.SerializerMethodField("get_permalink")
-    tags = TagsField(default=[], required=False)
     project = ProjectSerializer()
     milestone = MilestoneSerializer()
     owner = UserSerializer()
@@ -395,30 +425,29 @@ class IssueSerializer(CustomAttributesValuesWebhookSerializerMixin, EditableWatc
     priority = PrioritySerializer()
     severity = SeveritySerializer()
 
-    class Meta:
-        model = issue_models.Issue
-        exclude = ("version", "total_watchers", "is_watcher")
-
     def get_permalink(self, obj):
         return resolve_front_url("issue", obj.project.slug, obj.ref)
 
     def custom_attributes_queryset(self, project):
         return project.issuecustomattributes.all()
 
+    def get_watchers(self, obj):
+        return list(obj.get_watchers().values_list("id", flat=True))
 
 ########################################################################
 ## Wiki Page
 ########################################################################
 
-class WikiPageSerializer(serializers.ModelSerializer):
+class WikiPageSerializer(serializers.LightSerializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    content = serpy.Field()
+    created_date = serpy.Field()
+    modified_date = serpy.Field()
     permalink = serializers.SerializerMethodField("get_permalink")
     project = ProjectSerializer()
     owner = UserSerializer()
     last_modifier = UserSerializer()
-
-    class Meta:
-        model = wiki_models.WikiPage
-        exclude = ("watchers", "total_watchers", "is_watcher", "version")
 
     def get_permalink(self, obj):
         return resolve_front_url("wiki", obj.project.slug, obj.slug)

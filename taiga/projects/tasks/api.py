@@ -26,7 +26,6 @@ from taiga.base.decorators import list_route
 from taiga.base.api import ModelCrudViewSet, ModelListViewSet
 from taiga.base.api.mixins import BlockedByProjectMixin
 
-from taiga.projects.attachments.utils import attach_basic_attachments
 from taiga.projects.history.mixins import HistoryResourceMixin
 from taiga.projects.models import Project, TaskStatus
 from taiga.projects.notifications.mixins import WatchedResourceMixin, WatchersViewSetMixin
@@ -39,6 +38,7 @@ from . import permissions
 from . import serializers
 from . import services
 from . import validators
+from . import utils as tasks_utils
 
 class TaskViewSet(OCCResourceMixin, VotedResourceMixin, HistoryResourceMixin, WatchedResourceMixin,
                   TaggedResourceMixin, BlockedByProjectMixin, ModelCrudViewSet):
@@ -75,17 +75,15 @@ class TaskViewSet(OCCResourceMixin, VotedResourceMixin, HistoryResourceMixin, Wa
 
     def get_queryset(self):
         qs = super().get_queryset()
-        qs = self.attach_votes_attrs_to_queryset(qs)
         qs = qs.select_related("milestone",
                                "project",
                                "status",
                                "owner",
                                "assigned_to")
 
-        qs = self.attach_watchers_attrs_to_queryset(qs)
-        if "include_attachments" in self.request.QUERY_PARAMS:
-            qs = attach_basic_attachments(qs)
-            qs = qs.extra(select={"include_attachments": "True"})
+        include_attachments = "include_attachments" in self.request.QUERY_PARAMS
+        qs = tasks_utils.attach_extra_info(qs, user=self.request.user,
+                                           include_attachments=include_attachments)
 
         return qs
 

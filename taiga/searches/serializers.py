@@ -16,37 +16,51 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from taiga.projects.issues.serializers import IssueSerializer
-from taiga.projects.userstories.serializers import UserStorySerializer
-from taiga.projects.tasks.serializers import TaskSerializer
-from taiga.projects.wiki.serializers import WikiPageSerializer
+from taiga.base.api import serializers
 
 from taiga.projects.issues.models import Issue
 from taiga.projects.userstories.models import UserStory
 from taiga.projects.tasks.models import Task
 from taiga.projects.wiki.models import WikiPage
 
+import serpy
 
-class IssueSearchResultsSerializer(IssueSerializer):
-    class Meta:
-        model = Issue
-        fields = ('id', 'ref', 'subject', 'status', 'assigned_to')
-
-
-class TaskSearchResultsSerializer(TaskSerializer):
-    class Meta:
-        model = Task
-        fields = ('id', 'ref', 'subject', 'status', 'assigned_to')
+class IssueSearchResultsSerializer(serializers.LightSerializer):
+    id = serpy.Field()
+    ref = serpy.Field()
+    subject = serpy.Field()
+    status = serpy.Field(attr="status_id")
+    assigned_to = serpy.Field(attr="assigned_to_id")
 
 
-class UserStorySearchResultsSerializer(UserStorySerializer):
-    class Meta:
-        model = UserStory
-        fields = ('id', 'ref', 'subject', 'status', 'total_points',
-                  'milestone_name', 'milestone_slug')
+class TaskSearchResultsSerializer(serializers.LightSerializer):
+    id = serpy.Field()
+    ref = serpy.Field()
+    subject = serpy.Field()
+    status = serpy.Field(attr="status_id")
+    assigned_to = serpy.Field(attr="assigned_to_id")
 
 
-class WikiPageSearchResultsSerializer(WikiPageSerializer):
-    class Meta:
-        model = WikiPage
-        fields = ('id', 'slug')
+class UserStorySearchResultsSerializer(serializers.LightSerializer):
+    id = serpy.Field()
+    ref = serpy.Field()
+    subject = serpy.Field()
+    status = serpy.Field(attr="status_id")
+    total_points = serpy.MethodField()
+    milestone_name = serpy.MethodField()
+    milestone_slug = serpy.MethodField()
+
+    def get_milestone_name(self, obj):
+        return obj.milestone.name if obj.milestone else None
+
+    def get_milestone_slug(self, obj):
+        return obj.milestone.slug if obj.milestone else None
+
+    def get_total_points(self, obj):
+        assert hasattr(obj, "total_points_attr"), "instance must have a total_points_attr attribute"
+        return obj.total_points_attr
+
+
+class WikiPageSearchResultsSerializer(serializers.LightSerializer):
+    id = serpy.Field()
+    slug = serpy.Field()

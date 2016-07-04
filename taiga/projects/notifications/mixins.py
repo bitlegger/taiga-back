@@ -53,15 +53,7 @@ class WatchedResourceMixin:
     """
 
     _not_notify = False
-
-    def attach_watchers_attrs_to_queryset(self, queryset):
-        queryset = attach_watchers_to_queryset(queryset)
-        queryset = attach_total_watchers_to_queryset(queryset)
-        if self.request.user.is_authenticated():
-            queryset = attach_is_watcher_to_queryset(queryset, self.request.user)
-
-        return queryset
-
+    
     @detail_route(methods=["POST"])
     def watch(self, request, pk=None):
         obj = self.get_object()

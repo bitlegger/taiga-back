@@ -42,7 +42,7 @@ def test_webhooks_when_create_issue(settings):
     with patch('taiga.webhooks.tasks._send_request') as send_request_mock:
         services.take_snapshot(obj, user=obj.owner)
         assert send_request_mock.call_count == 2
-
+        
         (webhook_id, url, key, data) = send_request_mock.call_args[0]
         assert data["action"] == "create"
         assert data["type"] == "issue"

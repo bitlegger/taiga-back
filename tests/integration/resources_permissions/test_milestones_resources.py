@@ -22,8 +22,11 @@ from django.core.urlresolvers import reverse
 from taiga.base.utils import json
 
 from taiga.projects import choices as project_choices
+from taiga.projects.models import Project
+from taiga.projects.utils import attach_extra_info as attach_project_extra_info
 from taiga.projects.milestones.serializers import MilestoneSerializer
 from taiga.projects.milestones.models import Milestone
+from taiga.projects.milestones.utils import attach_extra_info as attach_milestone_extra_info
 from taiga.projects.notifications.services import add_watcher
 from taiga.permissions.choices import MEMBERS_PERMISSIONS, ANON_PERMISSIONS
 
@@ -56,19 +59,26 @@ def data():
                                         anon_permissions=list(map(lambda x: x[0], ANON_PERMISSIONS)),
                                         public_permissions=list(map(lambda x: x[0], ANON_PERMISSIONS)),
                                         owner=m.project_owner)
+    m.public_project = attach_project_extra_info(Project.objects.all()).get(id=m.public_project.id)
+
     m.private_project1 = f.ProjectFactory(is_private=True,
                                           anon_permissions=list(map(lambda x: x[0], ANON_PERMISSIONS)),
                                           public_permissions=list(map(lambda x: x[0], ANON_PERMISSIONS)),
                                           owner=m.project_owner)
+    m.private_project1 = attach_project_extra_info(Project.objects.all()).get(id=m.private_project1.id)
+
     m.private_project2 = f.ProjectFactory(is_private=True,
                                           anon_permissions=[],
                                           public_permissions=[],
                                           owner=m.project_owner)
+    m.private_project2 = attach_project_extra_info(Project.objects.all()).get(id=m.private_project2.id)
+
     m.blocked_project = f.ProjectFactory(is_private=True,
                                          anon_permissions=[],
                                          public_permissions=[],
                                          owner=m.project_owner,
                                          blocked_code=project_choices.BLOCKED_BY_STAFF)
+    m.blocked_project = attach_project_extra_info(Project.objects.all()).get(id=m.blocked_project.id)
 
     m.public_membership = f.MembershipFactory(project=m.public_project,
                                               user=m.project_member_with_perms,
@@ -116,9 +126,13 @@ def data():
                     is_admin=True)
 
     m.public_milestone = f.MilestoneFactory(project=m.public_project)
+    m.public_milestone = attach_milestone_extra_info(Milestone.objects.all()).get(id=m.public_milestone.id)
     m.private_milestone1 = f.MilestoneFactory(project=m.private_project1)
+    m.private_milestone1 = attach_milestone_extra_info(Milestone.objects.all()).get(id=m.private_milestone1.id)
     m.private_milestone2 = f.MilestoneFactory(project=m.private_project2)
+    m.private_milestone2 = attach_milestone_extra_info(Milestone.objects.all()).get(id=m.private_milestone2.id)
     m.blocked_milestone = f.MilestoneFactory(project=m.blocked_project)
+    m.blocked_milestone = attach_milestone_extra_info(Milestone.objects.all()).get(id=m.blocked_milestone.id)
 
     return m
 

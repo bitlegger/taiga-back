@@ -64,6 +64,7 @@ class IssueSerializer(IssueListSerializer):
     comment = serpy.MethodField()
     generated_user_stories = serpy.MethodField()
     blocked_note_html = serpy.MethodField()
+    description = serpy.Field()
     description_html = serpy.MethodField()
 
     def get_comment(self, obj):

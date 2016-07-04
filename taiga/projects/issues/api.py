@@ -34,7 +34,7 @@ from taiga.projects.occ import OCCResourceMixin
 from taiga.projects.tagging.api import TaggedResourceMixin
 from taiga.projects.votes.mixins.viewsets import VotedResourceMixin, VotersViewSetMixin
 
-from .utils import attach_generated_user_stories
+from .utils import attach_extra_info
 
 from . import models
 from . import services
@@ -149,9 +149,8 @@ class IssueViewSet(OCCResourceMixin, VotedResourceMixin, HistoryResourceMixin, W
     def get_queryset(self):
         qs = super().get_queryset()
         qs = qs.select_related("owner", "assigned_to", "status", "project")
-        qs = self.attach_votes_attrs_to_queryset(qs)
-        qs = attach_generated_user_stories(qs)
-        return self.attach_watchers_attrs_to_queryset(qs)
+        qs = attach_extra_info(qs)
+        return qs
 
     def pre_save(self, obj):
         if not obj.id:

@@ -84,6 +84,7 @@ class TaskListSerializer(VoteResourceSerializerMixin, WatchedResourceModelSerial
 class TaskSerializer(TaskListSerializer):
     comment = serpy.MethodField()
     blocked_note_html = serpy.MethodField()
+    description = serpy.Field()
     description_html = serpy.MethodField()
 
     def get_comment(self, obj):
